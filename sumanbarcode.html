@@ -1,0 +1,997 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Barcode & QR Scanner Pro</title>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial,Helvetica,sans-serif;
+}
+
+body{
+background:#0f172a;
+color:white;
+min-height:100vh;
+padding:15px;
+}
+
+.container{
+max-width:1200px;
+margin:auto;
+}
+
+.header{
+text-align:center;
+margin-bottom:20px;
+}
+
+.header h1{
+font-size:2rem;
+margin-bottom:8px;
+}
+
+.header p{
+color:#94a3b8;
+}
+
+.card{
+background:#1e293b;
+border-radius:18px;
+padding:20px;
+margin-bottom:20px;
+box-shadow:0 10px 25px rgba(0,0,0,.25);
+}
+
+.status{
+display:flex;
+align-items:center;
+gap:10px;
+margin-top:10px;
+}
+
+.dot{
+width:12px;
+height:12px;
+border-radius:50%;
+background:red;
+}
+
+.dot.active{
+background:#22c55e;
+box-shadow:0 0 10px #22c55e;
+}
+
+.controls{
+display:flex;
+flex-wrap:wrap;
+gap:10px;
+margin-top:15px;
+}
+
+button{
+border:none;
+padding:12px 18px;
+border-radius:12px;
+cursor:pointer;
+font-weight:bold;
+transition:.3s;
+}
+
+button:hover{
+transform:translateY(-2px);
+}
+
+.start{
+background:#22c55e;
+color:white;
+}
+
+.stop{
+background:#ef4444;
+color:white;
+}
+
+.clear{
+background:#f97316;
+color:white;
+}
+
+.export{
+background:#3b82f6;
+color:white;
+}
+
+.copy{
+background:#10b981;
+color:white;
+}
+
+#reader{
+width:100%;
+overflow:hidden;
+border-radius:15px;
+margin-top:15px;
+}
+
+.resultBox{
+display:none;
+margin-top:20px;
+background:#0f172a;
+padding:20px;
+border-radius:15px;
+border:1px solid #334155;
+animation:fadeIn .4s ease;
+}
+
+.resultBox h3{
+margin-bottom:12px;
+color:#22c55e;
+}
+
+.resultRow{
+margin:8px 0;
+word-break:break-word;
+}
+
+.counter{
+font-size:1rem;
+font-weight:bold;
+margin-top:10px;
+}
+
+.success{
+margin-top:15px;
+padding:12px;
+background:#14532d;
+border-radius:10px;
+display:none;
+}
+
+.searchBox{
+width:100%;
+padding:12px;
+border-radius:10px;
+border:none;
+margin-bottom:15px;
+background:#334155;
+color:white;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+}
+
+th,td{
+padding:12px;
+border-bottom:1px solid #334155;
+text-align:left;
+font-size:14px;
+}
+
+th{
+background:#0f172a;
+}
+
+.loading{
+display:none;
+margin-top:15px;
+text-align:center;
+}
+
+.spinner{
+width:50px;
+height:50px;
+border:5px solid #334155;
+border-top:5px solid #22c55e;
+border-radius:50%;
+animation:spin 1s linear infinite;
+margin:auto;
+}
+
+.checkmark{
+display:none;
+font-size:50px;
+color:#22c55e;
+text-align:center;
+animation:pop .5s ease;
+}
+
+.message{
+margin-top:10px;
+padding:10px;
+border-radius:10px;
+background:#334155;
+}
+
+@keyframes spin{
+100%{
+transform:rotate(360deg);
+}
+}
+
+@keyframes fadeIn{
+from{
+opacity:0;
+transform:translateY(10px);
+}
+to{
+opacity:1;
+transform:translateY(0);
+}
+}
+
+@keyframes pop{
+0%{
+transform:scale(.5);
+opacity:0;
+}
+100%{
+transform:scale(1);
+opacity:1;
+}
+}
+
+@media(max-width:768px){
+
+th,td{
+font-size:12px;
+}
+
+button{
+width:100%;
+}
+
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="header">
+<h1>📷 Barcode & QR Scanner Pro</h1>
+<p>Scan QR Codes & Barcodes Instantly</p>
+</div>
+
+<div class="card">
+
+<h2>Scanner</h2>
+
+<div class="status">
+<div id="statusDot" class="dot"></div>
+<span id="scannerStatus">Scanner Stopped</span>
+</div>
+
+<div class="controls">
+
+<button class="start" id="startBtn">
+▶ Start Scanner
+</button>
+
+<button class="stop" id="stopBtn">
+■ Stop Scanner
+</button>
+
+<select id="cameraSelect"
+style="padding:12px;border-radius:12px;">
+<option>Loading Cameras...</option>
+</select>
+
+</div>
+
+<div class="loading" id="loading">
+<div class="spinner"></div>
+<p>Initializing Camera...</p>
+</div>
+
+<div id="reader"></div>
+
+<div class="message" id="message">
+Ready to scan...
+</div>
+
+<div class="checkmark" id="checkmark">
+✔
+</div>
+
+<div class="resultBox" id="resultBox">
+
+<h3>Scan Successful</h3>
+
+<div class="resultRow">
+<b>Value:</b>
+<span id="scanValue"></span>
+</div>
+
+<div class="resultRow">
+<b>Type:</b>
+<span id="scanType"></span>
+</div>
+
+<div class="resultRow">
+<b>Product Code:</b>
+<span id="productCode"></span>
+</div>
+
+<div class="resultRow">
+<b>Time:</b>
+<span id="scanTime"></span>
+</div>
+
+<button class="copy" id="copyBtn">
+Copy Result
+</button>
+
+<div class="success" id="successMsg">
+Scan saved successfully
+</div>
+
+</div>
+
+<div class="counter">
+Total Scans:
+<span id="scanCounter">0</span>
+</div>
+
+</div>
+
+<div class="card">
+
+<h2>Scan History</h2>
+
+<input
+type="text"
+id="searchInput"
+class="searchBox"
+placeholder="Search scans..."
+>
+
+<div class="controls">
+
+<button class="export" id="exportBtn">
+Export CSV
+</button>
+
+<button class="clear" id="clearBtn">
+Clear History
+</button>
+
+</div>
+
+<div style="overflow:auto;">
+
+<table>
+
+<thead>
+<tr>
+<th>Value</th>
+<th>Type</th>
+<th>Time</th>
+</tr>
+</thead>
+
+<tbody id="historyTable">
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+<script>
+
+let html5QrCode;
+let scanCount = 0;
+let scanHistory = [];
+let currentCamera = null;
+
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+const cameraSelect = document.getElementById("cameraSelect");
+
+const statusDot = document.getElementById("statusDot");
+const scannerStatus = document.getElementById("scannerStatus");
+
+const resultBox = document.getElementById("resultBox");
+const scanValue = document.getElementById("scanValue");
+const scanType = document.getElementById("scanType");
+const productCode = document.getElementById("productCode");
+const scanTime = document.getElementById("scanTime");
+
+const scanCounter = document.getElementById("scanCounter");
+
+const historyTable = document.getElementById("historyTable");
+
+const loading = document.getElementById("loading");
+
+const messageBox = document.getElementById("message");
+
+const checkmark = document.getElementById("checkmark");
+
+const successMsg = document.getElementById("successMsg");
+
+const searchInput = document.getElementById("searchInput");
+
+const copyBtn = document.getElementById("copyBtn");
+
+const clearBtn = document.getElementById("clearBtn");
+
+const exportBtn = document.getElementById("exportBtn");
+
+html5QrCode = new Html5Qrcode("reader");
+
+loadHistory();
+
+loadCameras();
+
+function setStatus(text, active=false){
+
+scannerStatus.textContent = text;
+
+if(active){
+statusDot.classList.add("active");
+}else{
+statusDot.classList.remove("active");
+}
+
+}
+
+function showMessage(text){
+
+messageBox.innerHTML = text;
+
+}
+
+async function loadCameras(){
+
+try{
+
+const devices =
+await Html5Qrcode.getCameras();
+
+cameraSelect.innerHTML = "";
+
+if(devices.length === 0){
+
+showMessage("❌ No camera detected");
+
+return;
+
+}
+
+devices.forEach(device=>{
+
+const option =
+document.createElement("option");
+
+option.value = device.id;
+
+option.textContent =
+device.label || "Camera";
+
+cameraSelect.appendChild(option);
+
+});
+
+currentCamera = devices[0].id;
+
+cameraSelect.value = currentCamera;
+
+cameraSelect.addEventListener("change",()=>{
+
+currentCamera = cameraSelect.value;
+
+});
+
+}
+catch(err){
+
+showMessage("❌ Unable to load cameras");
+
+console.error(err);
+
+}
+
+}
+
+function playBeep(){
+
+const audio =
+new Audio(
+"data:audio/wav;base64,UklGRlQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSAAAAA="
+);
+
+audio.play();
+
+}
+
+function vibratePhone(){
+
+if(navigator.vibrate){
+
+navigator.vibrate(250);
+
+}
+
+}
+
+function saveHistory(item){
+
+scanHistory.unshift(item);
+
+if(scanHistory.length > 20){
+
+scanHistory = scanHistory.slice(0,20);
+
+}
+
+localStorage.setItem(
+"scanner_history",
+JSON.stringify(scanHistory)
+);
+
+renderHistory();
+
+}
+
+function loadHistory(){
+
+const saved =
+localStorage.getItem(
+"scanner_history"
+);
+
+if(saved){
+
+scanHistory = JSON.parse(saved);
+
+scanCount = scanHistory.length;
+
+scanCounter.textContent = scanCount;
+
+renderHistory();
+
+}
+
+}
+
+function renderHistory(){
+
+historyTable.innerHTML = "";
+
+scanHistory.forEach(item=>{
+
+const row =
+document.createElement("tr");
+
+row.innerHTML = `
+<td>${item.value}</td>
+<td>${item.type}</td>
+<td>${item.time}</td>
+`;
+
+historyTable.appendChild(row);
+
+});
+
+scanCounter.textContent =
+scanHistory.length;
+
+}
+
+function showResult(decodedText,result){
+
+const now =
+new Date().toLocaleString();
+
+scanValue.textContent =
+decodedText;
+
+scanType.textContent =
+result.result.format.formatName;
+
+productCode.textContent =
+decodedText;
+
+scanTime.textContent =
+now;
+
+resultBox.style.display =
+"block";
+
+successMsg.style.display =
+"block";
+
+checkmark.style.display =
+"block";
+
+setTimeout(()=>{
+
+checkmark.style.display =
+"none";
+
+},1500);
+
+playBeep();
+
+vibratePhone();
+
+const item = {
+
+value: decodedText,
+
+type:
+result.result.format.formatName,
+
+time: now
+
+};
+
+saveHistory(item);
+
+}
+
+async function startScanner(){
+
+if(!currentCamera){
+
+showMessage("❌ Camera not available");
+
+return;
+
+}
+
+loading.style.display =
+"block";
+
+showMessage("📷 Starting scanner...");
+
+try{
+
+await html5QrCode.start(
+
+currentCamera,
+
+{
+fps:10,
+qrbox:250
+},
+
+(decodedText,result)=>{
+
+showResult(
+decodedText,
+result
+);
+
+},
+
+(error)=>{}
+
+);
+
+loading.style.display =
+"none";
+
+setStatus(
+"Scanner Running",
+true
+);
+
+showMessage(
+"✅ Scanner active"
+);
+
+}
+catch(err){
+
+loading.style.display =
+"none";
+
+showMessage(
+"❌ Camera permission denied or scanner failed"
+);
+
+console.error(err);
+
+}
+
+}
+
+async function stopScanner(){
+
+try{
+
+await html5QrCode.stop();
+
+setStatus(
+"Scanner Stopped"
+);
+
+showMessage(
+"Scanner stopped"
+);
+
+}
+catch(err){
+
+console.log(err);
+
+}
+
+}
+
+startBtn.addEventListener(
+"click",
+startScanner
+);
+
+stopBtn.addEventListener(
+"click",
+stopScanner
+);
+
+copyBtn.addEventListener(
+"click",
+()=>{
+
+navigator.clipboard.writeText(
+scanValue.textContent
+);
+
+alert("Copied");
+
+}
+);
+
+</script>
+<script>
+
+/* Search History */
+
+searchInput.addEventListener("input", () => {
+
+const keyword =
+searchInput.value.toLowerCase();
+
+const rows =
+historyTable.querySelectorAll("tr");
+
+rows.forEach(row => {
+
+const text =
+row.textContent.toLowerCase();
+
+if(text.includes(keyword)){
+row.style.display = "";
+}else{
+row.style.display = "none";
+}
+
+});
+
+});
+
+/* Clear History */
+
+clearBtn.addEventListener("click", () => {
+
+const confirmDelete =
+confirm("Clear all scan history?");
+
+if(!confirmDelete) return;
+
+scanHistory = [];
+
+localStorage.removeItem(
+"scanner_history"
+);
+
+renderHistory();
+
+showMessage(
+"🗑 History cleared"
+);
+
+});
+
+/* Export CSV */
+
+exportBtn.addEventListener("click", () => {
+
+if(scanHistory.length === 0){
+
+alert("No history to export");
+
+return;
+
+}
+
+let csv =
+"Value,Type,Time\n";
+
+scanHistory.forEach(item => {
+
+csv += `"${item.value}","${item.type}","${item.time}"\n`;
+
+});
+
+const blob =
+new Blob(
+[csv],
+{
+type:"text/csv"
+}
+);
+
+const url =
+URL.createObjectURL(blob);
+
+const a =
+document.createElement("a");
+
+a.href = url;
+
+a.download =
+"scan-history.csv";
+
+document.body.appendChild(a);
+
+a.click();
+
+document.body.removeChild(a);
+
+URL.revokeObjectURL(url);
+
+showMessage(
+"📁 CSV Exported"
+);
+
+});
+
+/* Browser Support Check */
+
+function browserSupportCheck(){
+
+if(
+!navigator.mediaDevices ||
+!navigator.mediaDevices.getUserMedia
+){
+
+showMessage(
+"❌ Browser does not support camera access"
+);
+
+startBtn.disabled = true;
+
+return false;
+
+}
+
+return true;
+
+}
+
+browserSupportCheck();
+
+/* Permission Check */
+
+async function checkPermission(){
+
+try{
+
+const stream =
+await navigator.mediaDevices.getUserMedia({
+video:true
+});
+
+stream.getTracks().forEach(track=>{
+track.stop();
+});
+
+showMessage(
+"✅ Camera permission granted"
+);
+
+}
+catch(err){
+
+showMessage(
+"❌ Camera permission denied"
+);
+
+}
+
+}
+
+checkPermission();
+
+/* Visibility Handling */
+
+document.addEventListener(
+"visibilitychange",
+async ()=>{
+
+if(document.hidden){
+
+try{
+
+await html5QrCode.stop();
+
+setStatus(
+"Scanner Paused"
+);
+
+}
+catch(e){}
+
+}
+
+}
+);
+
+/* Initialization */
+
+window.addEventListener(
+"load",
+()=>{
+
+setStatus(
+"Scanner Stopped"
+);
+
+renderHistory();
+
+showMessage(
+"Ready to scan QR Codes & Barcodes"
+);
+
+}
+);
+
+/* Friendly Global Errors */
+
+window.addEventListener(
+"error",
+(event)=>{
+
+console.error(event.error);
+
+showMessage(
+"⚠ Unexpected error occurred"
+);
+
+}
+);
+
+window.addEventListener(
+"unhandledrejection",
+(event)=>{
+
+console.error(event.reason);
+
+showMessage(
+"⚠ Scanner initialization failed"
+);
+
+}
+);
+
+</script>
+
+</body>
+</html>
